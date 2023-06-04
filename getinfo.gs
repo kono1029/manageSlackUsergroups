@@ -32,7 +32,7 @@ function getUserGroupID(user_id_list) {
 function getUserIDs() {
   Logger.log("START getUserIDs");
 
-  const error_flg = false;
+  let error_flg = false;
   const user_id_list = [];
   // 現状を取得
   const last_row = SHEET_USERS.getLastRow();
@@ -74,7 +74,7 @@ function getUserIDs() {
   // 書き込み
   SHEET_USERS.getRange(2, 1, last_row - 1, 4).setValues(user_infos);
 
-  if (error_flg) {
+  if (!error_flg) {
     throw new Error(':UserIDが見つかりませんでした');
   }
   return user_id_list.join(',');
