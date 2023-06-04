@@ -9,6 +9,7 @@ const CELL_LAST_TIME = SHEET_CONFIG.getRange(6, 2); // 最終実行時刻
 const CELL_RESULT = SHEET_CONFIG.getRange(7, 2); // 処理結果
 const CELL_PROCESSING_SEC = SHEET_CONFIG.getRange(8, 2); // 処理時間
 const USER_TOKEN = PropertiesService.getScriptProperties().getProperty("USER_TOKEN"); // User OAuth Token
+const IND_NAME = 0;
 const IND_EMAIL = 1;
 const IND_USER_ID = 2;
 const IND_ERROR = 3;
