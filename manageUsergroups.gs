@@ -19,32 +19,34 @@ const API_USERGROUPS_CREATE = SLACK_API_URL + "usergroups.create";
 const API_USERS_LOOKUPBYEMAIL = SLACK_API_URL + "users.lookupByEmail";
 const API_USERGROUPS_USERS_UPDATE = SLACK_API_URL + "usergroups.users.update";
 
-let start_time = new Date();
+const start_time = new Date();
+const usergroup_name = CELL_USER_GROUP_NAME.getValue();
+const usergroup_handle = CELL_USER_GROUP_HANDLE.getValue();
+const usergroup_id = CELL_USER_GROUP_ID.getValue();
+const usergroup_team_id = CELL_WORKSPACE_ID.getValue();
 
 /** UserGroupIDを求める */
 function getUserGroupID() {
   console.log("START getUserGroupID");
-  let usergroup_name = CELL_USER_GROUP_NAME.getValue();
-  let usergroup_handle = CELL_USER_GROUP_HANDLE.getValue();
-  let usergroup_id = CELL_USER_GROUP_ID.getValue();
 
   // GroupIDがわかっている場合はこのまま終了
   if (usergroup_id !== "") {
     return usergroup_id;
   } else {
     // ユーザーグループが未設定の場合は作成する
-    let createdUserGroupId = createSlackUserGroup(usergroup_name, usergroup_handle);
+    let createdUserGroupId = createSlackUserGroup(usergroup_name, usergroup_handle,usergroup_team_id);
     CELL_USER_GROUP_ID.setValue(createdUserGroupId);
     return createdUserGroupId;
   }
 }
 
 /** ユーザーグループを作成する */
-function createSlackUserGroup(userGroupName, userGroupHandle) {
+function createSlackUserGroup(userGroupName, userGroupHandle,userGroupTeamID) {
   const payload = {
     token: USER_TOKEN,
-    name: userGroupName,
-    handle: userGroupHandle,
+    'name': userGroupName,
+    'handle': userGroupHandle,
+    'team_id': userGroupTeamID
   };
 
   const options = {
@@ -63,17 +65,17 @@ function createSlackUserGroup(userGroupName, userGroupHandle) {
 }
 
 /** カンマ区切りのUserIDリストを返す */
-function getUserIDs(usergroup_id) {
+function getUserIDs() {
   console.log("START getUserIDs");
-  let error_flg = false;
-  let user_id_list = [];
+  const error_flg = false;
+  const user_id_list = [];
   // 現状を取得
-  let last_row = SHEET_USERS.getLastRow();
-  let user_infos = SHEET_USERS.getRange(2, 1, last_row - 1, 4).getValues();
+  const last_row = SHEET_USERS.getLastRow();
+  const user_infos = SHEET_USERS.getRange(2, 1, last_row - 1, 4).getValues();
   console.log(user_infos);
 
   // UserIDが不明なものはメアドから検索
-  let requests = [];
+  const requests = [];
   user_infos.forEach(function (user_info) {
     console.log(user_info);
     // user_idがわかっているものは飛ばす
@@ -81,7 +83,7 @@ function getUserIDs(usergroup_id) {
       requests.push(genRequest(user_info[IND_EMAIL]));
     }
   });
-  let responses = UrlFetchApp.fetchAll(requests);
+  const responses = UrlFetchApp.fetchAll(requests);
 
   // 検索結果をもとに全SlackIDを求める
   let i = 0;
@@ -89,7 +91,7 @@ function getUserIDs(usergroup_id) {
     console.log(user_info);
     // user_idがわかっているものはそのまま追加
     if (user_info[IND_USER_ID] === "") {
-      let response = JSON.parse(responses[i].getContentText("UTF-8"));
+      const response = JSON.parse(responses[i].getContentText("UTF-8"));
       console.log(response);
       if (response['ok'] === true) {
         console.log(response['user']['id'] + " " + response['user']['name'] + ' ' + response['user']['profile']['email']);
@@ -115,7 +117,7 @@ function getUserIDs(usergroup_id) {
 
 /** fetchAllで投げるためのAPI_USERS_LOOKUPBYEMAILリクエストを生成 */
 function genRequest(email) {
-  let request = {
+  const request = {
     'url': API_USERS_LOOKUPBYEMAIL + "?token=" + USER_TOKEN + "&email=" + email,
     'contentType': 'application/x-www-form-urlencoded',
     'method': 'get',
@@ -124,24 +126,25 @@ function genRequest(email) {
 }
 
 /** ユーザーグループの更新 */
-function updateUserGroup(usergroup_id, user_id_list) {
+function updateUserGroup(userGroupID, userID_List, userGroupTeamID) {
   console.log("START updateUserGroup");
-  console.log(usergroup_id + "," + user_id_list);
+  console.log(userGroupID + "," + userID_List+ "," + userGroupTeamID);
 
-  let payload = {
+  const payload = {
     'token': USER_TOKEN,
-    'usergroup': usergroup_id,
-    'users': user_id_list,
+    'usergroup': userGroupID,
+    'users': userID_List,
+    'team_id': userGroupTeamID
   };
-  let params = { 'method': 'post', 'contentType': 'application/x-www-form-urlencoded', 'payload': payload };
-  let response = callApi(API_USERGROUPS_USERS_UPDATE, params);
+  const params = { 'method': 'post', 'contentType': 'application/x-www-form-urlencoded', 'payload': payload };
+  const response = callApi(API_USERGROUPS_USERS_UPDATE, params);
   console.log(response);
 }
 
 /** SlackAPIの呼び出し */
 function callApi(url, params) {
-  let response = UrlFetchApp.fetch(url, params);
-  let resjson = JSON.parse(response.getContentText());
+  const response = UrlFetchApp.fetch(url, params);
+  const resjson = JSON.parse(response.getContentText());
   console.log(resjson);
   if (resjson.ok !== true) {
     console.log('エラー：' + resjson['error']);
@@ -154,9 +157,9 @@ function callApi(url, params) {
 function writeResult(message, isEnd) {
   // 処理自体終了の場合は処理時間なども記入
   if (isEnd) {
-    let end_time = new Date();
-    let last_date = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
-    let processing_sec = (end_time - start_time) / 1000;
+    const end_time = new Date();
+    const last_date = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+    const processing_sec = (end_time - start_time) / 1000;
     CELL_LAST_TIME.setValue(last_date);
     CELL_PROCESSING_SEC.setValue(processing_sec);
   }
@@ -169,11 +172,11 @@ function main() {
   writeResult("実行中", false);
   try {
     // UserGroupIDを求める
-    let usergroup_id = getUserGroupID();
+    const usergroup_id = getUserGroupID();
     // 各行のUserIDを求める
-    let user_id_list = getUserIDs(usergroup_id);
+    const user_id_list = getUserIDs();
     // Update実施
-    updateUserGroup(usergroup_id, user_id_list);
+    updateUserGroup(usergroup_id, user_id_list, usergroup_team_id);
   } catch (e) {
     writeResult(e.name + " " + e.message, true);
     return;
